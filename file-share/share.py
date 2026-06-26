@@ -35,7 +35,7 @@ except ImportError:
     HAS_QRCODE = False
 
 # ── 常量 ──────────────────────────────────────────────────
-VERSION = "1.0.0"
+VERSION = "1.0.1"
 MAX_UPLOAD_SIZE = 500 * 1024 * 1024  # 500MB
 
 # ── HTML 模板 ─────────────────────────────────────────────
@@ -353,6 +353,13 @@ class ShareHandler(http.server.SimpleHTTPRequestHandler):
     root_dir = os.getcwd()
     allow_upload = False
 
+    def handle(self):
+        """处理请求，静默吞掉客户端断开连接的错误（手机浏览器预连接探测等）"""
+        try:
+            super().handle()
+        except (ConnectionResetError, ConnectionAbortedError, BrokenPipeError, OSError):
+            pass  # 客户端断开连接，无需日志刷屏
+
     def log_message(self, format, *args):
         """自定义日志格式"""
         timestamp = time.strftime("%H:%M:%S")
@@ -374,6 +381,10 @@ class ShareHandler(http.server.SimpleHTTPRequestHandler):
         """处理 GET 请求"""
         parsed = urllib.parse.urlparse(self.path)
         path = parsed.path
+        qs = urllib.parse.parse_qs(parsed.query)
+
+        # ?dl=1 强制下载（解决手机浏览器忽略 download 属性的痛点）
+        force_download = "dl" in qs
 
         # 普通文件请求
         filepath = self.translate_path(path)
@@ -381,10 +392,9 @@ class ShareHandler(http.server.SimpleHTTPRequestHandler):
         if os.path.isdir(filepath):
             self.serve_directory(filepath, path)
         elif os.path.isfile(filepath):
-            self.serve_file(filepath)
+            self.serve_file(filepath, force_download=force_download)
         else:
             self.send_error(404, "File not found")
-            self.send_response(404)
 
     def do_POST(self):
         """处理 POST 请求（文件上传）"""
@@ -518,16 +528,17 @@ class ShareHandler(http.server.SimpleHTTPRequestHandler):
                     </div>"""
                 else:
                     download_url = relative
+                    dl_url = relative + "?dl=1"
                     row = f"""
                     <div class="file-row">
                       <div class="file-icon">{icon}</div>
                       <div class="file-info">
-                        <div class="file-name"><a href="{download_url}" download="{escaped_name}">{escaped_name}</a></div>
+                        <div class="file-name"><a href="{dl_url}">{escaped_name}</a></div>
                         <div class="file-meta">{format_size(size)}</div>
                       </div>
                       <div class="file-actions">
-                        <a href="{download_url}" download="{escaped_name}" class="btn btn-dl">⬇ 下载</a>
-                        <span class="btn btn-copy" onclick="copyLink('{download_url}')">📋 复制链接</span>
+                        <a href="{dl_url}" class="btn btn-dl">⬇ 下载</a>
+                        <span class="btn btn-copy" onclick="copyLink('{dl_url}')">📋 复制链接</span>
                       </div>
                     </div>"""
                 body_parts.append(row)
@@ -567,8 +578,8 @@ function copyLink(path) {
         self.end_headers()
         self.wfile.write(html_content.encode("utf-8"))
 
-    def serve_file(self, filepath):
-        """提供文件下载"""
+    def serve_file(self, filepath, force_download=False):
+        """提供文件下载。force_download=True 时强制手机弹出保存对话框"""
         try:
             f = open(filepath, "rb")
         except OSError:
@@ -578,9 +589,14 @@ function copyLink(path) {
         try:
             fs = os.fstat(f.fileno())
             file_size = fs[6]
-            content_type, _ = mimetypes.guess_type(filepath)
-            if content_type is None:
+
+            # 强制下载模式：用 application/octet-stream 防止手机浏览器内联预览
+            if force_download:
                 content_type = "application/octet-stream"
+            else:
+                content_type, _ = mimetypes.guess_type(filepath)
+                if content_type is None:
+                    content_type = "application/octet-stream"
 
             # 支持 Range 请求（大文件断点续传/视频跳转）
             range_header = self.headers.get("Range")
@@ -607,6 +623,10 @@ function copyLink(path) {
                 self.send_header("Accept-Ranges", "bytes")
                 self.send_header("Content-Type", content_type)
 
+                # 强制下载头
+                if force_download:
+                    self.send_header("X-Content-Type-Options", "nosniff")
+
                 # 设置下载文件名（处理中文）
                 self.set_content_disposition(filepath)
 
@@ -625,6 +645,8 @@ function copyLink(path) {
                 self.send_header("Content-Type", content_type)
                 self.send_header("Content-Length", str(file_size))
                 self.send_header("Accept-Ranges", "bytes")
+                if force_download:
+                    self.send_header("X-Content-Type-Options", "nosniff")
                 self.set_content_disposition(filepath)
                 self.end_headers()
 
