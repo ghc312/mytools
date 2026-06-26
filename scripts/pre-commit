@@ -1,0 +1,22 @@
+#!/bin/bash
+# 本地 pre-commit hook：每次 commit 前自动更新 README
+# 安装方式：bash scripts/install-hooks.sh
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+cd "$REPO_ROOT"
+
+# 检查是否有子目录变化（排除 scripts 和 .github）
+TOOLS_DIR=$(ls -d */ 2>/dev/null | grep -v '^scripts/\|^.github/' | tr -d '/')
+
+if [ -z "$TOOLS_DIR" ]; then
+    exit 0
+fi
+
+echo "🔍 检测工具目录变化，自动更新 README..."
+python3 "$SCRIPT_DIR/update-readme.py"
+
+# 把更新后的 README 加入暂存区
+git add README.md
+echo "✅ README 已更新"
