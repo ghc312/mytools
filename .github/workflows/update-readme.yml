@@ -4,11 +4,10 @@ on:
   push:
     branches:
       - main
-    paths:
-      # 只在这些变化时触发，避免无限循环
-      - 'doubao-message-cleaner/**'
-      - 'file-share/**'
-      - 'scripts/**'
+    paths-ignore:
+      # 除了 README 自身和 .github，任何目录变化都触发
+      - 'README.md'
+      - '.github/**'
 
 jobs:
   update-readme:
