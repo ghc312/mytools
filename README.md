@@ -9,7 +9,7 @@
 |------|------|------|
 | [豆包消息批量清理工具](./doubao-message-cleaner/) | 全自动批量删除**：自动滚动加载历史消息，分批调用豆包官方删除接口 | 浏览器脚本 |
 | [FileShare — 本地文件分享](./file-share/) | 在任意目录启动 HTTP 服务器，自动检测局域网 IP，终端显示二维码。手机扫码即可浏览、下载文件，免去微信传文件的压缩和大小限制。 | Python |
-| [Hello World — 示范工具](./hello-world/) | 一个用于测试 README 自动更新管线的示范工具目录，验证 pre-commit hook 和 GitHub Actions 的联动效果。 | 其他 |
+| [网购防坑小管家](./shopping-guard/) | 618 买了一堆，退了吗？价保过期了吗？维权话术写对了吗？ | 其他 |
 <!-- TOOLS_END -->
 
 ## 目录结构
@@ -20,7 +20,7 @@ mytools/
 ├── README.md
 ├── doubao-message-cleaner/
 ├── file-share/
-└── hello-world/
+└── shopping-guard/
 ```
 <!-- TREE_END -->
 
