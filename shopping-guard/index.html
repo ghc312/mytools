@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>网购防坑小管家</title>
+<style>
+  :root {
+    --bg: #f8f9fa;
+    --card: #fff;
+    --text: #2c3e50;
+    --sub: #6c757d;
+    --border: #e9ecef;
+    --red: #e74c3c;
+    --orange: #f39c12;
+    --green: #27ae60;
+    --blue: #3498db;
+    --purple: #8e44ad;
+    --shadow: 0 2px 12px rgba(0,0,0,.06);
+    --radius: 12px;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 20px;
+  }
+  .container { max-width: 900px; margin:0 auto; }
+
+  header {
+    text-align: center;
+    padding: 32px 0 24px;
+  }
+  header h1 { font-size: 28px; font-weight: 700; }
+  header p { color: var(--sub); margin-top: 6px; font-size: 14px; }
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .stat-card {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 16px;
+    text-align: center;
+    box-shadow: var(--shadow);
+  }
+  .stat-num { font-size: 32px; font-weight: 800; }
+  .stat-label { font-size: 12px; color: var(--sub); margin-top: 4px; }
+  .stat-red .stat-num { color: var(--red); }
+  .stat-orange .stat-num { color: var(--orange); }
+  .stat-green .stat-num { color: var(--green); }
+  .stat-blue .stat-num { color: var(--blue); }
+
+  .toolbar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+  .btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .btn-primary { background: var(--blue); color:#fff; }
+  .btn-primary:hover { background: #2980b9; }
+  .btn-outline { background: var(--card); color: var(--text); border: 1.5px solid var(--border); }
+  .btn-outline:hover { background: var(--bg); }
+  .btn-outline.active { background: var(--blue); color:#fff; border-color: var(--blue); }
+
+  .modal-overlay {
+    position: fixed;
+    top:0; left:0; right:0; bottom:0;
+    background: rgba(0,0,0,.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    visibility: hidden;
+    opacity: 0;
+    transition: all .2s;
+  }
+  .modal-overlay.show { visibility: visible; opacity: 1; }
+  .modal {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 28px;
+    width: 90%;
+    max-width: 480px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0,0,0,.15);
+  }
+  .modal h2 { font-size: 20px; margin-bottom: 20px; }
+  .modal label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--sub);
+    margin-bottom: 4px;
+    margin-top: 14px;
+  }
+  .modal input, .modal select, .modal textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    transition: border-color .2s;
+    background: var(--bg);
+  }
+  .modal input:focus, .modal select:focus, .modal textarea:focus {
+    outline: none;
+    border-color: var(--blue);
+    background: var(--card);
+  }
+  .modal .btn-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+    justify-content: flex-end;
+  }
+  .deadline-hint {
+    font-size: 12px;
+    color: var(--sub);
+    margin-top: 4px;
+    padding: 6px 10px;
+    background: #f0f4ff;
+    border-radius: 6px;
+    border-left: 3px solid var(--blue);
+  }
+
+  .order-list { display: flex; flex-direction: column; gap: 10px; }
+  .order-card {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    box-shadow: var(--shadow);
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    align-items: center;
+    gap: 12px;
+    transition: transform .15s;
+    border-left: 4px solid transparent;
+  }
+  .order-card:hover { transform: translateY(-1px); }
+  .order-card.expired { opacity: .6; border-left-color: var(--sub); }
+  .order-card.urgent { border-left-color: var(--red); }
+  .order-card.warning { border-left-color: var(--orange); }
+  .order-card.safe { border-left-color: var(--green); }
+  .order-card.returned { opacity: .5; text-decoration: line-through; }
+
+  .order-info .platform-badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-right: 8px;
+    vertical-align: middle;
+  }
+  .badge-jd { background: #ffe0e0; color: #c0392b; }
+  .badge-tb { background: #ffeaa7; color: #d68910; }
+  .badge-tm { background: #e8daef; color: #7d3c98; }
+  .badge-pdd { background: #d5f5e3; color: #1e8449; }
+  .badge-dy { background: #d6eaf8; color: #2471a3; }
+  .badge-other { background: #eaeded; color: #566573; }
+  .order-name { font-size: 15px; font-weight: 600; margin-top: 4px; }
+  .order-meta { font-size: 12px; color: var(--sub); margin-top: 2px; }
+
+  .order-deadline { text-align: center; min-width: 80px; }
+  .deadline-days { font-size: 28px; font-weight: 800; }
+  .deadline-label { font-size: 11px; color: var(--sub); }
+  .deadline-red { color: var(--red); }
+  .deadline-orange { color: var(--orange); }
+  .deadline-green { color: var(--green); }
+  .deadline-expired { color: var(--sub); }
+
+  .order-actions { display: flex; gap: 6px; flex-direction: column; }
+  .btn-sm {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .btn-sm-return { background: #d5f5e3; color: #1e8449; }
+  .btn-sm-complaint { background: #fdebd0; color: #b9770e; }
+  .btn-sm-del { background: #fadbd8; color: #c0392b; }
+
+  .complaint-box {
+    background: #fef9e7;
+    border: 1px solid #f9e79f;
+    border-radius: 8px;
+    padding: 14px;
+    font-size: 13px;
+    line-height: 1.8;
+    white-space: pre-wrap;
+    margin-top: 10px;
+    max-height: 200px;
+    overflow-y: auto;
+  }
+
+  .empty {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--sub);
+  }
+  .empty-icon { font-size: 48px; margin-bottom: 12px; }
+  .empty h3 { font-size: 18px; margin-bottom: 6px; color: var(--text); }
+
+  .info-banner {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: #fff;
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    margin-top: 24px;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+  .info-banner strong { font-size: 14px; }
+
+  @media (max-width: 600px) {
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    .order-card { grid-template-columns: 1fr; text-align: center; }
+    .order-actions { flex-direction: row; justify-content: center; }
+    header h1 { font-size: 22px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>🛒 网购防坑小管家</h1>
+    <p>记订单 · 盯退货 · 一键维权文案</p>
+  </header>
+
+  <div class="stats" id="stats"></div>
+
+  <div class="toolbar">
+    <button class="btn btn-primary" onclick="openModal()">＋ 添加订单</button>
+    <button class="btn btn-outline" id="filterAll" onclick="setFilter('all')">全部</button>
+    <button class="btn btn-outline" id="filterActive" onclick="setFilter('active')">进行中</button>
+    <button class="btn btn-outline" id="filterExpired" onclick="setFilter('expired')">已过期</button>
+    <button class="btn btn-outline" id="filterReturned" onclick="setFilter('returned')">已退</button>
+    <button class="btn btn-outline" onclick="exportData()">💾 导出</button>
+    <button class="btn btn-outline" onclick="document.getElementById('importFile').click()">📥 导入</button>
+    <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
+  </div>
+
+  <div class="order-list" id="orderList"></div>
+  <div class="empty" id="emptyState">
+    <div class="empty-icon">📦</div>
+    <h3>还没有订单</h3>
+    <p>点击「添加订单」开始记录你的网购</p>
+  </div>
+
+  <div class="info-banner">
+    <strong>📋 各大平台退货政策速查</strong><br>
+    京东 · 淘宝 · 拼多多 · 抖音：签收后 <strong>7 天</strong> 无理由 | 天猫：<strong>7 天</strong>（电器 15 天）| 京东自营价保：<strong>30 天</strong><br>
+    超期未退？点击「维权模板」一键生成投诉文案，直接复制发给客服。
+  </div>
+
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal">
+      <h2 id="modalTitle">添加订单</h2>
+      <label>购物平台</label>
+      <select id="formPlatform" onchange="updateDeadlineHint()">
+        <option value="京东">京东</option>
+        <option value="淘宝">淘宝</option>
+        <option value="天猫">天猫</option>
+        <option value="拼多多">拼多多</option>
+        <option value="抖音">抖音</option>
+        <option value="其他">其他</option>
+      </select>
+      <label>商品名称</label>
+      <input type="text" id="formName" placeholder="比如：AirPods Pro 2">
+      <label>订单金额（元）</label>
+      <input type="number" id="formAmount" placeholder="0.00" step="0.01" min="0">
+      <label>购买日期</label>
+      <input type="date" id="formDate">
+      <div class="deadline-hint" id="deadlineHint"></div>
+      <label>商品类别（用于维权模板）</label>
+      <select id="formCategory">
+        <option value="电子产品">电子产品</option>
+        <option value="服装鞋帽">服装鞋帽</option>
+        <option value="食品">食品</option>
+        <option value="家居日用">家居日用</option>
+        <option value="美妆个护">美妆个护</option>
+        <option value="其他">其他</option>
+      </select>
+      <label>备注（选填）</label>
+      <textarea id="formNote" rows="2" placeholder="订单号、颜色款式等"></textarea>
+      <input type="hidden" id="formEditId">
+      <div class="btn-row">
+        <button class="btn btn-outline" onclick="closeModal()">取消</button>
+        <button class="btn btn-primary" onclick="saveOrder()">💾 保存</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const RETURN_RULES = {
+  '京东': { days: 7, priceProtect: 30 },
+  '淘宝': { days: 7, priceProtect: 0 },
+  '天猫': { days: 15, priceProtect: 0 },
+  '拼多多': { days: 7, priceProtect: 0 },
+  '抖音': { days: 7, priceProtect: 0 },
+  '其他': { days: 7, priceProtect: 0 },
+};
+
+const COMPLAINT_TEMPLATES = {
+  '电子产品': `【产品质量投诉】
+我在贵平台购买了"{name}"，订单金额 ¥{amount}，于 {date} 签收。
+
+问题描述：该商品存在以下质量问题——
+1. 
+2. 
+3. 
+
+根据《消费者权益保护法》第二十四条，经营者提供的商品不符合质量要求的，消费者可依照国家规定、当事人约定退货。现要求贵方：
+① 无条件退货退款
+② 承担退货运费
+③ 在 3 个工作日内处理
+
+订单号：{note}
+如不处理，我将向 12315 平台及市场监管部门投诉。
+请于 24 小时内回复处理方案。`,
+
+  '服装鞋帽': `【商品与描述不符投诉】
+我于 {date} 在贵平台购买"{name}"，金额 ¥{amount}。
+
+收到的商品与页面描述严重不符：
+• 实际颜色/尺码与展示图不一致
+• 材质与标注成分不符
+
+依据《网络交易管理办法》，商品展示信息应真实准确。现要求：
+① 全额退款 ¥{amount}
+② 贵方承担退货运费
+
+订单号：{note}
+请在 24 小时内处理，否则我将通过 12315 维权。`,
+
+  '食品': `【食品安全投诉】
+我于 {date} 购买"{name}"，金额 ¥{amount}。
+
+该商品存在以下安全隐患：
+1. 
+2. 
+
+根据《食品安全法》第一百四十八条，生产不符合食品安全标准的食品，消费者除赔偿损失外，还可要求支付价款十倍或损失三倍的赔偿金。
+
+现正式要求：
+① 全额退款 ¥{amount}
+② 依法赔偿
+③ 下架问题商品
+
+订单号：{note}
+如 24 小时内未回复，本人将直接向市场监管部门举报。`,
+
+  '家居日用': `【商品质量投诉】
+{date} 在贵平台购买"{name}"，金额 ¥{amount}。
+
+商品存在质量问题：
+• 
+
+根据《消费者权益保护法》，本人要求：
+① 退货退款
+② 如属虚假宣传，三倍赔偿
+
+订单号：{note}
+请尽快处理。`,
+
+  '美妆个护': `【美妆产品投诉】
+{date} 购买"{name}"，金额 ¥{amount}。
+
+投诉原因：
+• 疑似假货/临期/过敏反应
+
+本人保留向药监局及 12315 投诉的权利。现要求：
+① 退货全额退款
+② 如确认为假货，依法三倍赔偿
+
+订单号：{note}
+请 24 小时内回复。`,
+
+  '其他': `【售后维权申请】
+我于 {date} 购买了"{name}"（¥{amount}），因商品存在问题，要求退货退款。
+
+订单号：{note}
+
+如不处理，本人将依法通过 12315 渠道维权。请尽快答复。`
+};
+
+const STORAGE_KEY = 'shopping_guard_orders';
+
+function getOrders() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+  catch(e) { return []; }
+}
+
+function saveOrders(orders) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(orders));
+}
+
+function generateId() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+
+function calcDeadline(order) {
+  const rule = RETURN_RULES[order.platform] || RETURN_RULES['其他'];
+  const buyDate = new Date(order.date + 'T00:00:00');
+  const deadline = new Date(buyDate);
+  deadline.setDate(deadline.getDate() + rule.days);
+  const dayMs = 24 * 60 * 60 * 1000;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  deadline.setHours(0, 0, 0, 0);
+  const daysLeft = Math.ceil((deadline - today) / dayMs);
+  return { deadline, daysLeft, rule };
+}
+
+function getStatus(order) {
+  if (order.returned) return 'returned';
+  const { daysLeft } = calcDeadline(order);
+  if (daysLeft < 0) return 'expired';
+  if (daysLeft <= 1) return 'urgent';
+  if (daysLeft <= 3) return 'warning';
+  return 'safe';
+}
+
+let currentFilter = 'all';
+
+function setFilter(f) {
+  currentFilter = f;
+  ['All','Active','Expired','Returned'].forEach(k => {
+    const btn = document.getElementById('filter' + k);
+    if (btn) btn.classList.toggle('active', k.toLowerCase() === f);
+  });
+  render();
+}
+
+function render() {
+  const orders = getOrders();
+  const list = document.getElementById('orderList');
+  const empty = document.getElementById('emptyState');
+
+  const allActive = orders.filter(o => !o.returned);
+  const urgent = allActive.filter(o => getStatus(o) === 'urgent').length;
+  const expired = allActive.filter(o => getStatus(o) === 'expired').length;
+  const inWindow = allActive.filter(o => getStatus(o) !== 'expired').length;
+
+  document.getElementById('stats').innerHTML = `
+    <div class="stat-card stat-blue"><div class="stat-num">${allActive.length}</div><div class="stat-label">进行中</div></div>
+    <div class="stat-card stat-red"><div class="stat-num">${urgent}</div><div class="stat-label">⚠️ 今/明到期</div></div>
+    <div class="stat-card stat-orange"><div class="stat-num">${inWindow}</div><div class="stat-label">退货窗口内</div></div>
+    <div class="stat-card stat-green"><div class="stat-num">${expired}</div><div class="stat-label">已过期</div></div>
+  `;
+
+  let filtered = orders;
+  if (currentFilter === 'active') filtered = orders.filter(o => !o.returned && getStatus(o) !== 'expired');
+  else if (currentFilter === 'expired') filtered = orders.filter(o => getStatus(o) === 'expired');
+  else if (currentFilter === 'returned') filtered = orders.filter(o => o.returned);
+
+  if (filtered.length === 0) {
+    list.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+
+  list.innerHTML = filtered.map(o => {
+    const { deadline, daysLeft } = calcDeadline(o);
+    const status = getStatus(o);
+
+    let dlClass = 'deadline-green';
+    let dlText = `${daysLeft} 天`;
+    if (o.returned) { dlClass = 'deadline-expired'; dlText = '已退'; }
+    else if (daysLeft < 0) { dlClass = 'deadline-expired'; dlText = '已过期'; }
+    else if (daysLeft === 0) { dlClass = 'deadline-red'; dlText = '今到期！'; }
+    else if (daysLeft === 1) { dlClass = 'deadline-red'; dlText = '明天'; }
+    else if (daysLeft <= 3) { dlClass = 'deadline-orange'; }
+    else if (daysLeft <= 7) { dlClass = 'deadline-orange'; }
+
+    let deadlineDate = `${deadline.getMonth()+1}月${deadline.getDate()}日`;
+    if (daysLeft < 0) deadlineDate = `已超 ${Math.abs(daysLeft)} 天`;
+
+    const badgeMap = {'京东':'jd','淘宝':'tb','天猫':'tm','拼多多':'pdd','抖音':'dy'};
+    const badge = badgeMap[o.platform] || 'other';
+
+    return `
+      <div class="order-card ${o.returned ? 'returned' : status === 'urgent' ? 'urgent' : status === 'warning' ? 'warning' : status === 'expired' ? 'expired' : 'safe'}">
+        <div class="order-info">
+          <span class="platform-badge badge-${badge}">${o.platform}</span>
+          <span style="font-size:12px;color:var(--sub)">${o.category || '其他'}</span>
+          <div class="order-name">${escapeHTML(o.name)}</div>
+          <div class="order-meta">
+            ¥${Number(o.amount).toFixed(2)} · 购买 ${o.date} · 截止 ${deadlineDate}
+            ${o.note ? ' · ' + escapeHTML(o.note) : ''}
+          </div>
+        </div>
+        <div class="order-deadline">
+          <div class="deadline-days ${dlClass}">${dlText}</div>
+          <div class="deadline-label">退货剩余</div>
+        </div>
+        <div class="order-actions">
+          ${!o.returned ? `<button class="btn-sm btn-sm-return" onclick="markReturned('${o.id}')">✅ 已退</button>` : `<button class="btn-sm btn-sm-return" onclick="markReturned('${o.id}')">↩️ 撤销</button>`}
+          <button class="btn-sm btn-sm-complaint" onclick="showComplaint('${o.id}')">⚖️ 维权模板</button>
+          <button class="btn-sm btn-sm-del" onclick="deleteOrder('${o.id}')">🗑 删除</button>
+        </div>
+      </div>
+      <div class="complaint-box" id="complaint-${o.id}" style="display:none"></div>
+    `;
+  }).join('');
+}
+
+function escapeHTML(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function openModal(editId) {
+  const overlay = document.getElementById('modalOverlay');
+  const title = document.getElementById('modalTitle');
+  document.getElementById('formEditId').value = '';
+  document.getElementById('formName').value = '';
+  document.getElementById('formAmount').value = '';
+  document.getElementById('formDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('formPlatform').value = '京东';
+  document.getElementById('formCategory').value = '电子产品';
+  document.getElementById('formNote').value = '';
+
+  if (editId) {
+    title.textContent = '编辑订单';
+    const orders = getOrders();
+    const o = orders.find(x => x.id === editId);
+    if (o) {
+      document.getElementById('formEditId').value = o.id;
+      document.getElementById('formName').value = o.name;
+      document.getElementById('formAmount').value = o.amount;
+      document.getElementById('formDate').value = o.date;
+      document.getElementById('formPlatform').value = o.platform;
+      document.getElementById('formCategory').value = o.category || '其他';
+      document.getElementById('formNote').value = o.note || '';
+    }
+  } else {
+    title.textContent = '添加订单';
+  }
+
+  overlay.classList.add('show');
+  updateDeadlineHint();
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('show');
+}
+
+function updateDeadlineHint() {
+  const plat = document.getElementById('formPlatform').value;
+  const rule = RETURN_RULES[plat] || RETURN_RULES['其他'];
+  let hint = `退货窗口：签收后 ${rule.days} 天内可退`;
+  if (rule.priceProtect > 0) hint += ` | 价保：${rule.priceProtect} 天`;
+  document.getElementById('deadlineHint').textContent = hint;
+}
+
+function saveOrder() {
+  const name = document.getElementById('formName').value.trim();
+  const amount = document.getElementById('formAmount').value;
+  const date = document.getElementById('formDate').value;
+  const platform = document.getElementById('formPlatform').value;
+  const category = document.getElementById('formCategory').value;
+  const note = document.getElementById('formNote').value.trim();
+  const editId = document.getElementById('formEditId').value;
+
+  if (!name || !amount || !date) {
+    alert('请填写商品名称、金额和购买日期');
+    return;
+  }
+
+  const orders = getOrders();
+  if (editId) {
+    const idx = orders.findIndex(o => o.id === editId);
+    if (idx >= 0) {
+      orders[idx] = { ...orders[idx], name, amount: Number(amount), date, platform, category, note };
+    }
+  } else {
+    orders.push({ id: generateId(), name, amount: Number(amount), date, platform, category, note, returned: false });
+  }
+
+  saveOrders(orders);
+  closeModal();
+  render();
+}
+
+function markReturned(id) {
+  const orders = getOrders();
+  const o = orders.find(x => x.id === id);
+  if (o) {
+    o.returned = !o.returned;
+    saveOrders(orders);
+    render();
+  }
+}
+
+function deleteOrder(id) {
+  if (!confirm('确定删除这个订单吗？')) return;
+  const orders = getOrders().filter(o => o.id !== id);
+  saveOrders(orders);
+  render();
+}
+
+function showComplaint(id) {
+  const box = document.getElementById('complaint-' + id);
+  if (!box) return;
+
+  if (box.style.display === 'block') {
+    box.style.display = 'none';
+    return;
+  }
+
+  const orders = getOrders();
+  const o = orders.find(x => x.id === id);
+  if (!o) return;
+
+  const cat = o.category || '其他';
+  let template = COMPLAINT_TEMPLATES[cat] || COMPLAINT_TEMPLATES['其他'];
+  template = template
+    .replace(/\{name\}/g, o.name)
+    .replace(/\{amount\}/g, Number(o.amount).toFixed(2))
+    .replace(/\{date\}/g, o.date)
+    .replace(/\{note\}/g, o.note || '无');
+
+  box.textContent = template;
+  box.style.display = 'block';
+  box.scrollIntoView({ behavior: 'smooth' });
+}
+
+function exportData() {
+  const orders = getOrders();
+  const blob = new Blob([JSON.stringify(orders, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `shopping-guard-backup-${new Date().toISOString().split('T')[0]}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importData(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(reader.result);
+      if (!Array.isArray(data)) throw new Error();
+      const merged = [...getOrders(), ...data];
+      saveOrders(merged);
+      render();
+      alert('导入成功！新增 ' + data.length + ' 条订单');
+    } catch(err) {
+      alert('文件格式不正确，请选择之前导出的 JSON 文件');
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+document.getElementById('modalOverlay').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeModal();
+});
+
+setFilter('all');
+render();
+</script>
+</body>
+</html>
